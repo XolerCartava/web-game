@@ -9,7 +9,7 @@ using NUnit.Framework;
 namespace DbTests
 {
     [TestFixture]
-    public class MongoUsersRepositoryShould
+    public class MongoUserRepositoryShould
     {
         [SetUp]
         public void SetUp()
