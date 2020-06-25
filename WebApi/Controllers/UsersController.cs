@@ -1,15 +1,10 @@
 using System;
-using System.Collections.Generic;
-using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
+using Game.Domain;
 using System.Linq;
 using AutoMapper;
-using Microsoft.AspNetCore.JsonPatch;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
-using Newtonsoft.Json;
-using Swashbuckle.AspNetCore.Annotations;
 using WebApi.Models;
-using Game.Domain;
 
 namespace WebApi.Controllers
 {
@@ -17,14 +12,15 @@ namespace WebApi.Controllers
     [ApiController]
     public class UsersController : Controller
     {
-        // Чтобы ASP.NET положил что-то в userRepository требуется конфигурация
         private readonly IUserRepository userRepository;
         private readonly IMapper mapper;
 
-        public UsersController(IUserRepository userRepository, IMapper mapper)
+        public UsersController(
+            IUserRepository userRepository,
+            IMapper mapper)
         {
-            this.mapper = mapper;
             this.userRepository = userRepository;
+            this.mapper = mapper;
         }
 
         [HttpGet("{userId}", Name = nameof(GetUserById))]
@@ -33,7 +29,6 @@ namespace WebApi.Controllers
         public ActionResult<UserDto> GetUserById([FromRoute] Guid userId)
         {
             var userFromRepository = userRepository.FindById(userId);
-            
             if (userFromRepository == null)
                 return NotFound();
 
@@ -43,59 +38,55 @@ namespace WebApi.Controllers
 
         [HttpPost]
         [Consumes("application/json")]
-        [Produces("application/json", "application/xml")]     
-           public IActionResult CreateUser([FromBody] CreaterUser user)
+        [Produces("application/json", "application/xml")]
+        public IActionResult CreateUser([FromBody] CreaterUser user)
         {
             if (user == null)
                 return BadRequest();
 
-            if (!user.Login.All(c => char.IsLetter(c) || char.IsDigit(c)))
+            if ((user.Login != "") && 
+                (user.Login != null) &&
+                (!user.Login.All(char.IsLetterOrDigit)))
             {
-                ModelState.AddModelError(nameof(CreaterUser),
+                ModelState.AddModelError(nameof(CreaterUser.Login),
                     "Login should contain only letters or digits.");
             }
 
             if (!ModelState.IsValid)
-                return new UnprocessableEntityObjectResult(ModelState);
+                return UnprocessableEntity(ModelState);
 
-            var userEntity = mapper.Map<UserEntity>(user);
-            var createdUserEntity = userRepository.Insert(userEntity);
+            var createdUserEntity = userRepository
+                .Insert(mapper.Map<UserEntity>(user));
+            var userId = createdUserEntity.Id;
 
             return CreatedAtRoute(
                 nameof(GetUserById),
-                new {userId = createdUserEntity.Id},
-                createdUserEntity.Id);
+                new { userId = userId },
+                userId);
         }
 
-        [HttpPost]
+        [HttpPut("{userId}")]
+        [Consumes("application/json")]
         [Produces("application/json", "application/xml")]
-        public IActionResult UpdateUser([FromRoute, Required] Guid userId, [FromBody] CreaterUser user)
+        public IActionResult UpdateUser([FromRoute] Guid userId, [FromBody] UpdaterUser user)
         {
-
-            if (user == null)
+            if (user == null || userId == Guid.Empty)
                 return BadRequest();
 
-            if (!user.Login.All(c => char.IsLetter(c) || char.IsDigit(c)))
-                ModelState.AddModelError(nameof(CreaterUser),
-                    "Логин должен быть из цифр или букв!");
-
             if (!ModelState.IsValid)
-                return new UnprocessableEntityObjectResult(ModelState);
+                return UnprocessableEntity(ModelState);
 
-            var userFromRepo = userRepository.FindById(userId);
-            if (userFromRepo == null)
+            var newUserEntity = new UserEntity(userId);
+            mapper.Map(user, newUserEntity);
+            userRepository.UpdateOrInsert(newUserEntity, out bool isInserted);
+
+            if (isInserted)
             {
-                var userEntity = mapper.Map<UserEntity>(new UserEntity(userId));
-                userRepository.UpdateOrInsert(userEntity, out bool isInserted);
-                
                 return CreatedAtRoute(
                     nameof(GetUserById),
-                    new { userId = userEntity.Id },
-                    userEntity.Id);
+                    new { userId = newUserEntity.Id },
+                    newUserEntity.Id);
             }
-
-            mapper.Map(user, userFromRepo);
-            userRepository.Update(userFromRepo);
             return NoContent();
         }
     }

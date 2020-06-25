@@ -27,7 +27,6 @@ namespace WebApi
             {
                 options.OutputFormatters.Add(new XmlDataContractSerializerOutputFormatter());
                 options.ReturnHttpNotAcceptable = true;
-
                 options.RespectBrowserAcceptHeader = true;
             })
                 .ConfigureApiBehaviorOptions(options =>
@@ -46,6 +45,8 @@ namespace WebApi
                 cfg.CreateMap<UserEntity, UserDto>()
                     .ForMember(dest => dest.FullName, opt => opt.MapFrom(src =>
                         $"{src.LastName} {src.FirstName}"));
+                cfg.CreateMap<CreaterUser, UserEntity>();
+                cfg.CreateMap<UpdaterUser, UserEntity>();
             }, new System.Reflection.Assembly[0]);
         }
 
