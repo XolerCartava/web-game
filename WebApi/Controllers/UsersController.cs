@@ -120,5 +120,21 @@ namespace WebApi.Controllers
 
             return NoContent();       
         }
+
+        [HttpDelete("{userId}")]
+        [Consumes("application/json")]
+        [Produces("application/json", "application/xml")]
+        public IActionResult DeleteUser([FromRoute] Guid userId) 
+        {
+            if (userId == Guid.Empty)
+                return BadRequest();
+            
+            var userFromRepository = userRepository.FindById(userId);             
+            if (userFromRepository == null)
+                return NotFound();
+
+            userRepository.Delete(userId);
+            return NoContent();
+        }
     }
 }
