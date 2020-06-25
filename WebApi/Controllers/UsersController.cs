@@ -1,7 +1,9 @@
 using System;
+using System.Linq;
 using AutoMapper;
 using Game.Domain;
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 using WebApi.Models;
 
 namespace WebApi.Controllers
@@ -20,8 +22,11 @@ namespace WebApi.Controllers
             this.userRepository = userRepository;
         }
 
-        [HttpGet("{userId}")]
+        [HttpGet("{userId}", Name = nameof(GetUserById))]
+        [HttpHead("{userId}")]
         [Produces("application/json", "application/xml")]
+        [SwaggerResponse(200, "OK", typeof(UserDto))]
+        [SwaggerResponse(404, "Пользователь не найден")]
         public ActionResult<UserDto> GetUserById([FromRoute] Guid userId)
         {
             var userFromRepository = userRepository.FindById(userId);
@@ -34,9 +39,30 @@ namespace WebApi.Controllers
         }
 
         [HttpPost]
-        public IActionResult CreateUser([FromBody] object user)
+        [Produces("application/json", "application/xml")]
+        public IActionResult CreateUser([FromBody] CreaterUser user)
         {
-            throw new NotImplementedException();
+            if (user == null)
+                return BadRequest();
+
+            if (!string.IsNullOrEmpty(user.Login) &&
+                !user.Login.All(char.IsLetterOrDigit))
+            {
+                ModelState.AddModelError(nameof(CreaterUser.Login),
+                    "Логин должен быть из цифр или букв!");
+            }
+
+            if (!ModelState.IsValid)
+                return UnprocessableEntity(ModelState);
+
+            var UserNew = mapper.Map<UserEntity>(user);
+            var CreateUserNew = userRepository.Insert(UserNew);
+
+            return CreatedAtRoute(
+                nameof(GetUserById),
+                new { userId = CreateUserNew.Id },
+                CreateUserNew.Id);
         }
+
     }
 }
