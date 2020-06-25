@@ -5,6 +5,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using WebApi.Models;
+using Microsoft.AspNetCore.JsonPatch;
 
 namespace WebApi.Controllers
 {
@@ -70,7 +71,10 @@ namespace WebApi.Controllers
         [Produces("application/json", "application/xml")]
         public IActionResult UpdateUser([FromRoute] Guid userId, [FromBody] UpdaterUser user)
         {
-            if (user == null || userId == Guid.Empty)
+            if (user == null)
+                return BadRequest();
+            
+            if (userId == Guid.Empty)
                 return BadRequest();
 
             if (!ModelState.IsValid)
@@ -88,6 +92,33 @@ namespace WebApi.Controllers
                     newUserEntity.Id);
             }
             return NoContent();
+        }
+
+        [HttpPatch("{userId}")]
+        [Consumes("application/json")]
+        [Produces("application/json", "application/xml")]
+        public IActionResult PartiallyUpdateUser([FromRoute] Guid userId,
+            [FromBody] JsonPatchDocument<UpdaterUser> changes) {
+            if (userId == Guid.Empty)
+                return NotFound();
+
+            if (changes == null)
+                return BadRequest();
+
+            var userFromRepository = userRepository.FindById(userId);             
+            if (userFromRepository == null)
+                return NotFound();
+
+            var user = mapper.Map<UpdaterUser>(userFromRepository);
+            changes.ApplyTo(user, ModelState);
+            TryValidateModel(user);
+            if (!ModelState.IsValid)
+                return UnprocessableEntity(ModelState);
+
+            mapper.Map(user, userFromRepository);
+            userRepository.Update(userFromRepository);
+
+            return NoContent();       
         }
     }
 }
