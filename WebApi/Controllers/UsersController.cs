@@ -127,14 +127,14 @@ namespace WebApi.Controllers
         public IActionResult DeleteUser([FromRoute] Guid userId) 
         {
             if (userId == Guid.Empty)
-                return BadRequest();
+                return NotFound(); //BadRequest();
             
             var userFromRepository = userRepository.FindById(userId);             
             if (userFromRepository == null)
                 return NotFound();
 
             userRepository.Delete(userId);
-            return NoContent();
+                return NoContent();
         }
     }
 }
