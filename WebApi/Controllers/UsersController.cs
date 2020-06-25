@@ -1,11 +1,15 @@
 using System;
+using System.Collections.Generic;
+using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using AutoMapper;
-using Game.Domain;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.JsonPatch;
+using Microsoft.AspNetCore.Routing;
+using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Annotations;
 using WebApi.Models;
+using Game.Domain;
 
 namespace WebApi.Controllers
 {
@@ -26,8 +30,6 @@ namespace WebApi.Controllers
         [HttpGet("{userId}", Name = nameof(GetUserById))]
         [HttpHead("{userId}")]
         [Produces("application/json", "application/xml")]
-        [SwaggerResponse(200, "OK", typeof(UserDto))]
-        [SwaggerResponse(404, "Пользователь не найден")]
         public ActionResult<UserDto> GetUserById([FromRoute] Guid userId)
         {
             var userFromRepository = userRepository.FindById(userId);
@@ -40,29 +42,29 @@ namespace WebApi.Controllers
         }
 
         [HttpPost]
-        [Produces("application/json", "application/xml")]
-        public IActionResult CreateUser([FromBody] CreaterUser user)
+        [Consumes("application/json")]
+        [Produces("application/json", "application/xml")]     
+           public IActionResult CreateUser([FromBody] CreaterUser user)
         {
             if (user == null)
                 return BadRequest();
 
-            if (!string.IsNullOrEmpty(user.Login) &&
-                !user.Login.All(char.IsLetterOrDigit))
+            if (!user.Login.All(c => char.IsLetter(c) || char.IsDigit(c)))
             {
-                ModelState.AddModelError(nameof(CreaterUser.Login),
-                    "Логин должен быть из цифр или букв!");
+                ModelState.AddModelError(nameof(CreaterUser),
+                    "Login should contain only letters or digits.");
             }
 
             if (!ModelState.IsValid)
-                return UnprocessableEntity(ModelState);
+                return new UnprocessableEntityObjectResult(ModelState);
 
-            var UserNew = mapper.Map<UserEntity>(user);
-            var CreateUserNew = userRepository.Insert(UserNew);
+            var userEntity = mapper.Map<UserEntity>(user);
+            var createdUserEntity = userRepository.Insert(userEntity);
 
             return CreatedAtRoute(
                 nameof(GetUserById),
-                new { userId = CreateUserNew.Id },
-                CreateUserNew.Id);
+                new {userId = createdUserEntity.Id},
+                createdUserEntity.Id);
         }
 
         [HttpPost]
