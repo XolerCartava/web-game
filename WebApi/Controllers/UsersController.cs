@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Newtonsoft.Json;
-using Swashbuckle.AspNetCore.Annotations;
 using WebApi.Models;
 
 namespace WebApi.Controllers
