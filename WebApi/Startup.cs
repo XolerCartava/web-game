@@ -48,6 +48,7 @@ namespace WebApi
                 cfg.CreateMap<CreaterUser, UserEntity>();
                 cfg.CreateMap<UpdaterUser, UserEntity>();
                 cfg.CreateMap<UserEntity, UpdaterUser>();
+                
             }, new System.Reflection.Assembly[0]);
         }
 
