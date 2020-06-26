@@ -143,7 +143,7 @@ namespace WebApi.Controllers
                 return NoContent();
         }
 
-        [HttpGet]
+        [HttpGet(Name = nameof(GetUsers))]
         [Consumes("application/json")]
         [Produces("application/json", "application/xml")]
         public ActionResult<IEnumerable<UserDto>> GetUsers(int pageNumber = 1, int pageSize = 10)
@@ -170,6 +170,13 @@ namespace WebApi.Controllers
         private string CreateUsersInf(int pageNumber, int pageSize)
         {
             return linkGenerator.GetUriByRouteValues(HttpContext, nameof(GetUsers), new {pageNumber, pageSize});
+        }
+
+        [HttpOptions]
+        public IActionResult GetUsersOptions()
+        {
+            Response.Headers.Add("Allow", "POST,GET,OPTIONS");
+            return Ok();
         }
     }
 }
